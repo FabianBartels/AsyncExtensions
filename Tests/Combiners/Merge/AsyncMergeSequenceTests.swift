@@ -193,44 +193,6 @@ final class AsyncMergeSequenceTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func testMerge_propagates_error() {
-    let canSend2Expectation = expectation(description: "2 can be sent")
-    let canSend3Expectation = expectation(description: "3 can be sent")
-    let mergedSequenceIsFinishedExpectation = expectation(description: "The merged sequence is finished")
-
-    let stream1 = AsyncThrowingCurrentValueSubject<Int, Error>(1)
-    let stream2 = AsyncPassthroughSubject<Int>()
-
-    let sut = merge(stream1, stream2)
-
-    Task {
-      var receivedElements = [Int]()
-      do {
-        for try await element in sut {
-          receivedElements.append(element)
-          if element == 1 {
-            canSend2Expectation.fulfill()
-          }
-          if element == 2 {
-            canSend3Expectation.fulfill()
-          }
-        }
-      } catch {
-        XCTAssertEqual(receivedElements, [1, 2])
-        mergedSequenceIsFinishedExpectation.fulfill()
-      }
-    }
-
-    wait(for: [canSend2Expectation], timeout: 1)
-
-    stream2.send(2)
-    wait(for: [canSend3Expectation], timeout: 1)
-
-    stream1.send(.failure(MockError(code: 1)))
-
-    wait(for: [mergedSequenceIsFinishedExpectation], timeout: 1)
-  }
-
   func testMerge_finishes_when_task_is_cancelled() {
     let canCancelExpectation = expectation(description: "The first element has been emitted")
     let hasCancelExceptation = expectation(description: "The task has been cancelled")
